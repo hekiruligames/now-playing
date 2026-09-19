@@ -72,14 +72,14 @@ VLCビデオソースで再生中の楽曲からメタデータを取得し、�
 初期設定では、曲名とアーティストを改行して表示します。
 
 ```text
-♪ Spring walk
-秋山裕和(Hirokazu Akiyama)
+♪ Sample Track
+Example Artist
 ```
 
 区切りを ` / ` に変更すると、
 
 ```text
-♪ Spring walk / 秋山裕和(Hirokazu Akiyama)
+♪ Sample Track / Example Artist
 ```
 
 のように一行表示もできます。
@@ -168,11 +168,11 @@ track03.mp3
 例:
 
 ```text
-title        : Spring walk
-artist       : 秋山裕和(Hirokazu Akiyama)/秋山裕和
-album        : 地中海・猫の旅6500キロ
-album_artist : 秋山裕和(Hirokazu Akiyama)
-date         : 2008
+title        : Sample Track
+artist       : Example Artist
+album        : Sample Album
+album_artist : Example Artist
+date         : 2026
 ```
 
 ### 自動監視
