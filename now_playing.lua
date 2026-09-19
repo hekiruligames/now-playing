@@ -9,7 +9,8 @@ obs = obslua
 local FILTER_ID = "now_playing_filter"
 local POLL_INTERVAL_MS = 1000
 
-local instances = {}\nlocal instance_serial = 0
+local instances = {}
+local instance_serial = 0
 
 local TAGS = {
     "title",
