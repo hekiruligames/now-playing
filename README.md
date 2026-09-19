@@ -1,4 +1,4 @@
-# OBS VLC Now Playing
+# Now Playing
 
 OBS Studio の **VLCビデオソースで現在再生している楽曲情報を、テキストソースへ自動表示する Lua スクリプト**です。
 
@@ -6,15 +6,17 @@ VLCビデオソースに `.m3u` プレイリストを設定している場合だ
 
 > 通常の「メディアソース」ではなく、**VLCビデオソース**を対象にしています。
 
+> **非公式ツールです。** このプロジェクトは OBS Project および VideoLAN と提携・承認・後援関係にありません。OBS Studio、VLC および関連名称は、それぞれの権利者に帰属します。本文中の名称は、対応環境や機能を説明する目的で使用しています。
+
 ## ファイル
 
-### `obs_vlc_now_playing.lua`
+### `now_playing.lua`
 
 普段使う本体です。
 
 VLCビデオソースで再生中の楽曲からメタデータを取得し、指定したOBSテキストソースへ表示します。
 
-### `obs_vlc_metadata_probe.lua`
+### `metadata_probe.lua`
 
 メタデータ確認用の診断ツールです。
 
@@ -59,10 +61,10 @@ VLCビデオソースで再生中の楽曲からメタデータを取得し、�
 
 ## 導入方法
 
-1. `obs_vlc_now_playing.lua` をダウンロードします。
+1. `now_playing.lua` をダウンロードします。
 2. OBS Studio を開きます。
 3. **ツール → スクリプト** を開きます。
-4. `+` を押して `obs_vlc_now_playing.lua` を追加します。
+4. `+` を押して `now_playing.lua` を追加します。
 5. 「VLCビデオソース」からBGMを再生しているソースを選択します。
 6. 「表示先テキストソース」から、曲情報を書き込むテキストソースを選択します。
 7. 表示したい項目や区切り方法を設定します。
@@ -158,9 +160,9 @@ track03.mp3
 
 ## メタデータを確認する
 
-表示がおかしい場合は、`obs_vlc_metadata_probe.lua` を使用してください。
+表示がおかしい場合は、`metadata_probe.lua` を使用してください。
 
-1. **ツール → スクリプト** から `obs_vlc_metadata_probe.lua` を追加
+1. **ツール → スクリプト** から `metadata_probe.lua` を追加
 2. 対象のVLCビデオソースを選択
 3. **今すぐメタデータを取得** を押す
 4. OBS のスクリプトログを確認
@@ -215,7 +217,7 @@ Windows / Linux についても、OBS標準のテキストソースを対象に�
 
 ### 曲名が表示されない
 
-`obs_vlc_metadata_probe.lua` で `title` や `now_playing` が取得できているか確認してください。
+`metadata_probe.lua` で `title` や `now_playing` が取得できているか確認してください。
 
 ### アーティスト名がおかしい
 
@@ -239,9 +241,9 @@ Windows / Linux についても、OBS標準のテキストソースを対象に�
 
 ```text
 now-playing/
-├─ obs_vlc_now_playing.lua
-├─ obs_vlc_metadata_probe.lua
+├─ now_playing.lua
+├─ metadata_probe.lua
 └─ README.md
 ```
 
-`obs_vlc_now_playing.lua` が通常利用する本体、`obs_vlc_metadata_probe.lua` はトラブルシューティング用です。
+`now_playing.lua` が通常利用する本体、`metadata_probe.lua` はトラブルシューティング用です。
