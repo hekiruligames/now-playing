@@ -53,6 +53,7 @@ local function release_parent_weak(data)
     end
 
     data.parent_supported = false
+    data.parent_name = ""
 end
 
 local function set_parent_source(data, parent)
@@ -64,18 +65,20 @@ local function set_parent_source(data, parent)
 
     data.parent_weak = obs.obs_source_get_weak_source(parent)
     data.parent_supported = is_supported_text_source(parent)
+    data.parent_name = safe_string(obs.obs_source_get_name(parent))
     data.last_output = nil
 
-    if not data.parent_supported then
-        local parent_name = safe_string(obs.obs_source_get_name(parent))
+    if not data.parent_supported and not data.unsupported_parent_logged then
         local parent_id = safe_string(obs.obs_source_get_unversioned_id(parent))
 
         obs.script_log(
             obs.LOG_WARNING,
             "[Now Playing] このフィルタはOBS標準テキストソース向けです。"
-                .. " 追加先: " .. parent_name
+                .. " 追加先: " .. data.parent_name
                 .. " (" .. parent_id .. ")"
         )
+
+        data.unsupported_parent_logged = true
     end
 end
 
@@ -84,7 +87,66 @@ local function get_parent_source(data)
         return nil
     end
 
-    return obs.obs_weak_source_get_source(data.parent_weak)
+    local parent = obs.obs_weak_source_get_source(data.parent_weak)
+
+    if parent == nil then
+        release_parent_weak(data)
+    end
+
+    return parent
+end
+
+local function discover_parent(data)
+    if data.destroyed or data.filter_uuid == "" then
+        return false
+    end
+
+    local sources = obs.obs_enum_sources()
+    if sources == nil then
+        return false
+    end
+
+    local found_parent = nil
+
+    for _, parent in ipairs(sources) do
+        local filters = obs.obs_source_enum_filters(parent)
+
+        if filters ~= nil then
+            for _, filter_source in ipairs(filters) do
+                local filter_uuid = safe_string(obs.obs_source_get_uuid(filter_source))
+
+                if filter_uuid == data.filter_uuid then
+                    found_parent = parent
+                    break
+                end
+            end
+
+            obs.source_list_release(filters)
+        end
+
+        if found_parent ~= nil then
+            break
+        end
+    end
+
+    if found_parent ~= nil then
+        data.unsupported_parent_logged = false
+        set_parent_source(data, found_parent)
+    end
+
+    obs.source_list_release(sources)
+    return found_parent ~= nil
+end
+
+local function ensure_parent(data)
+    local parent = get_parent_source(data)
+
+    if parent ~= nil then
+        obs.obs_source_release(parent)
+        return true
+    end
+
+    return discover_parent(data)
 end
 
 local function get_metadata(source, tag_id)
@@ -164,7 +226,6 @@ local function selected_artist(data, values)
     elseif data.artist_mode == "album_artist_only" then
         return album_artist
     else
-        -- default: album_artist_first
         if album_artist ~= "" then
             return album_artist
         end
@@ -254,7 +315,7 @@ local function set_parent_text(data, text)
 
     if not is_supported_text_source(parent) then
         obs.obs_source_release(parent)
-        data.parent_supported = false
+        release_parent_weak(data)
         return
     end
 
@@ -280,7 +341,15 @@ local function state_is_inactive(state)
 end
 
 local function refresh_instance(data)
-    if data == nil or data.destroyed or not data.parent_supported then
+    if data == nil or data.destroyed then
+        return
+    end
+
+    if data.filter_source == nil or not obs.obs_source_enabled(data.filter_source) then
+        return
+    end
+
+    if not ensure_parent(data) or not data.parent_supported then
         return
     end
 
@@ -502,9 +571,12 @@ end
 local function filter_create(settings, source)
     local data = {
         filter_source = source,
+        filter_uuid = safe_string(obs.obs_source_get_uuid(source)),
         parent_weak = nil,
         parent_supported = false,
+        parent_name = "",
         destroyed = false,
+        unsupported_parent_logged = false,
         last_output = nil,
         inactive_ticks = 0,
         metadata_error_logged = false
@@ -517,7 +589,7 @@ local function filter_create(settings, source)
 end
 
 local function filter_destroy(data)
-    if data == nil then
+    if data == nil or data.destroyed then
         return
     end
 
@@ -533,23 +605,6 @@ local function filter_update(data, settings)
     end
 
     apply_settings(data, settings)
-end
-
-local function filter_add(data, parent)
-    if data == nil or data.destroyed then
-        return
-    end
-
-    set_parent_source(data, parent)
-end
-
-local function filter_remove(data, parent)
-    if data == nil then
-        return
-    end
-
-    release_parent_weak(data)
-    data.last_output = nil
 end
 
 local function filter_video_render(data, effect)
@@ -574,8 +629,6 @@ filter_info.destroy = filter_destroy
 filter_info.update = filter_update
 filter_info.get_defaults = filter_defaults
 filter_info.get_properties = filter_properties
-filter_info.filter_add = filter_add
-filter_info.filter_remove = filter_remove
 filter_info.video_render = filter_video_render
 
 obs.obs_register_source(filter_info)
@@ -606,4 +659,8 @@ end
 
 function script_unload()
     obs.timer_remove(monitor_tick)
+
+    for data, _ in pairs(instances) do
+        release_parent_weak(data)
+    end
 end
