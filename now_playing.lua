@@ -6,7 +6,7 @@ obs = obslua
 -- 各フィルタインスタンスごとに監視対象のVLCビデオソースと
 -- 表示形式を保持し、Lua全体で1本のタイマーから順番に更新する。
 
-local FILTER_ID = "now_playing_filter"
+local FILTER_ID = "lua_now_playing_filter_v1"
 local POLL_INTERVAL_MS = 1000
 
 local instances = {}
