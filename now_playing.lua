@@ -9,7 +9,7 @@ obs = obslua
 local FILTER_ID = "now_playing_filter"
 local POLL_INTERVAL_MS = 1000
 
-local instances = {}
+local instances = {}\nlocal instance_serial = 0
 
 local TAGS = {
     "title",
@@ -96,8 +96,27 @@ local function get_parent_source(data)
     return parent
 end
 
+local function filter_instance_id(filter_source)
+    if filter_source == nil then
+        return ""
+    end
+
+    if safe_string(obs.obs_source_get_unversioned_id(filter_source)) ~= FILTER_ID then
+        return ""
+    end
+
+    local settings = obs.obs_source_get_settings(filter_source)
+    if settings == nil then
+        return ""
+    end
+
+    local instance_id = safe_string(obs.obs_data_get_string(settings, "_np_instance_id"))
+    obs.obs_data_release(settings)
+    return instance_id
+end
+
 local function discover_parent(data)
-    if data.destroyed or data.filter_uuid == "" then
+    if data.destroyed or data.instance_id == "" then
         return false
     end
 
@@ -113,9 +132,7 @@ local function discover_parent(data)
 
         if filters ~= nil then
             for _, filter_source in ipairs(filters) do
-                local filter_uuid = safe_string(obs.obs_source_get_uuid(filter_source))
-
-                if filter_uuid == data.filter_uuid then
+                if filter_instance_id(filter_source) == data.instance_id then
                     found_parent = parent
                     break
                 end
@@ -568,10 +585,43 @@ local function filter_properties(data)
     return props
 end
 
+local function generate_instance_id()
+    instance_serial = instance_serial + 1
+
+    return string.format(
+        "np-%d-%d-%d",
+        os.time(),
+        instance_serial,
+        math.floor(os.clock() * 1000000)
+    )
+end
+
+local function instance_id_is_active(instance_id)
+    if instance_id == "" then
+        return false
+    end
+
+    for existing, _ in pairs(instances) do
+        if not existing.destroyed and existing.instance_id == instance_id then
+            return true
+        end
+    end
+
+    return false
+end
+
 local function filter_create(settings, source)
+    local instance_id = safe_string(obs.obs_data_get_string(settings, "_np_instance_id"))
+
+    -- フィルタ複製などで内部IDが重複した場合は、新しいIDへ差し替える。
+    if instance_id == "" or instance_id_is_active(instance_id) then
+        instance_id = generate_instance_id()
+        obs.obs_data_set_string(settings, "_np_instance_id", instance_id)
+    end
+
     local data = {
         filter_source = source,
-        filter_uuid = safe_string(obs.obs_source_get_uuid(source)),
+        instance_id = instance_id,
         parent_weak = nil,
         parent_supported = false,
         parent_name = "",
@@ -607,6 +657,14 @@ local function filter_update(data, settings)
     apply_settings(data, settings)
 end
 
+local function filter_save(data, settings)
+    if data == nil or data.destroyed then
+        return
+    end
+
+    obs.obs_data_set_string(settings, "_np_instance_id", data.instance_id)
+end
+
 local function filter_video_render(data, effect)
     if data == nil or data.destroyed or data.filter_source == nil then
         return
@@ -627,6 +685,7 @@ end
 filter_info.create = filter_create
 filter_info.destroy = filter_destroy
 filter_info.update = filter_update
+filter_info.save = filter_save
 filter_info.get_defaults = filter_defaults
 filter_info.get_properties = filter_properties
 filter_info.video_render = filter_video_render
