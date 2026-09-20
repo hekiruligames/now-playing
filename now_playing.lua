@@ -1,6 +1,6 @@
 obs = obslua
 
--- Now Playing v2.0
+-- Now Playing v2.0.1-dev
 --
 -- OBS標準テキストソースへ追加するフィルタとして動作する。
 -- 各フィルタインスタンスごとに監視対象のVLCビデオソースと
@@ -676,6 +676,35 @@ local function filter_video_render(data, effect)
     obs.obs_source_skip_video_filter(data.filter_source)
 end
 
+local function filter_get_width(data)
+    if data == nil or data.destroyed or data.filter_source == nil then
+        return 0
+    end
+
+    -- フィルタは描画サイズを変更しないため、
+    -- 次のターゲットソースのサイズをそのまま引き継ぐ。
+    local target = obs.obs_filter_get_target(data.filter_source)
+    if target == nil then
+        return 0
+    end
+
+    return obs.obs_source_get_base_width(target)
+end
+
+local function filter_get_height(data)
+    if data == nil or data.destroyed or data.filter_source == nil then
+        return 0
+    end
+
+    -- 幅と同様に、ターゲットソースの高さをそのまま返す。
+    local target = obs.obs_filter_get_target(data.filter_source)
+    if target == nil then
+        return 0
+    end
+
+    return obs.obs_source_get_base_height(target)
+end
+
 local filter_info = {}
 filter_info.id = FILTER_ID
 filter_info.type = obs.OBS_SOURCE_TYPE_FILTER
@@ -690,12 +719,14 @@ filter_info.save = filter_save
 filter_info.get_defaults = filter_defaults
 filter_info.get_properties = filter_properties
 filter_info.video_render = filter_video_render
+filter_info.get_width = filter_get_width
+filter_info.get_height = filter_get_height
 
 obs.obs_register_source(filter_info)
 
 function script_description()
     return [[
-Now Playing v2.0
+Now Playing v2.0.1 開発版
 
 OBS標準テキストソースの「フィルタ」から「Now Playing」を追加して使用します。
 各フィルタごとに、監視するVLCビデオソースと表示形式を個別設定できます。
