@@ -1,6 +1,6 @@
 obs = obslua
 
--- Now Playing v2.0.1-dev
+-- Now Playing v2.0.1
 --
 -- OBS標準テキストソースへ追加するフィルタとして動作する。
 -- 各フィルタインスタンスごとに監視対象のVLCビデオソースと
@@ -726,7 +726,7 @@ obs.obs_register_source(filter_info)
 
 function script_description()
     return [[
-Now Playing v2.0.1 開発版
+Now Playing v2.0.1
 
 OBS標準テキストソースの「フィルタ」から「Now Playing」を追加して使用します。
 各フィルタごとに、監視するVLCビデオソースと表示形式を個別設定できます。
